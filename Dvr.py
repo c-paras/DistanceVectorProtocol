@@ -1,6 +1,7 @@
 #!/usr/bin/python
 #Written by Costa Paraskevopoulos in May 2017
 #Implements the distance vector routing protocol over UDP
+#Python 2.7 has been used (the #! line should default to version 2.7)
 
 import sys, re, os, time, select
 from socket import *
