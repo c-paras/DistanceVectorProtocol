@@ -119,11 +119,16 @@ def recompute_dist(neighbors, my_dist, received_dv, sender_id):
 	cost_to_sender = get_cost(neighbors, sender_id)
 
 	#update costs via this sender
-	for node in my_dist[sender_id]:
-		if node in received_dv:
-			my_dist[sender_id][node] = cost_to_sender + received_dv[node]
+	for node in received_dv:
+		if node == my_id():
+			continue
 		else:
-			my_dist[sender_id][node] = 0 #no path to this node anymore #TODO
+		#	if node == 'B':
+#				print received_dv[node], my_dist[sender_id][node]
+#			else:
+			my_dist[sender_id][node] = cost_to_sender + received_dv[node]
+#	else:
+#		pass #my_dist[sender_id][node] = 0 #no path to this node anymore #TODO
 	return my_dist
 
 #updates the dv table based on the current dist table
@@ -137,8 +142,8 @@ def recompute_dv(my_dist, my_dv):
 	for n in my_dist:
 		dv[n] = float('infinity')
 #		known_nodes.append(n)
-		for m in my_dist:
-			dv[n] = float('infinity')
+		for m in my_dist[n]:
+			dv[m] = float('infinity')
 #			if not m in known_nodes:
 #				known_nodes.append(m)
 #	known_nodes = list(set(known_nodes))
