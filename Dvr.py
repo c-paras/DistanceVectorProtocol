@@ -6,7 +6,7 @@
 import sys, re, os, time, select
 from socket import *
 
-DEBUG = 1
+DEBUG = 0
 
 def main():
 
@@ -42,6 +42,8 @@ def main():
 		sys.exit(1)
 
 	last_advert = 0 #node hasn't shared dv yet - set to beginning of time
+	dv_changed = {} #tracks whether the last advert from a router changed the dv
+	printed_dv = False #ensures a particular stable dv is only printed once
 
 	while 1:
 		try:
@@ -52,7 +54,7 @@ def main():
 				last_advert = current_time
 				msg = str(my_dv) #TODO
 				if DEBUG:
-					print my_id(), 'sending...'
+					print my_id(), 'sending:'
 					print msg
 				for n in neighbors:
 					sock.sendto(msg, ('', get_port(neighbors, n)))
@@ -71,9 +73,26 @@ def main():
 					for node in my_dist:
 						print 'Via', node + ':', my_dist[node]
 
+				old_dv = my_dv
 				my_dv = recompute_dv(my_dist)
 				if DEBUG:
 					print 'My DV table:'
+					for node in my_dv:
+						print node, my_dv[node]
+
+				#update the change status of the dv from the current sender
+				if my_dv != old_dv:
+					dv_changed[sender_id] = True
+					if printed_dv == True:
+						printed_dv = False #allow dv to be printed again
+				else:
+					dv_changed[sender_id] = False
+
+				#print dv if dv is considered stable; stability is detected when
+				#the last advert from all nodes has not changed the dv
+				if printed_dv == False and is_dv_stable(neighbors, dv_changed):
+					printed_dv = True
+					print "Router %s's DV table:" %my_id()
 					for node in my_dv:
 						print node, my_dv[node]
 
@@ -151,19 +170,28 @@ def recompute_dv(my_dist):
 
 	return dv
 
+#returns True if the dv is stable; False otherwise
+def is_dv_stable(neighbors, dv_changed):
+	for n in neighbors:
+		if not n in dv_changed:
+			return False #don't assume anything until at least one advert
+		elif dv_changed[n]:
+			return False
+	return True
+
 #getters
 def get_cost(neighbors, node_id):
 	return neighbors[node_id][0]
 def get_port(neighbors, node_id):
 	return neighbors[node_id][1]
-def my_id():
-	return NODE_ID
-def my_port():
-	return NODE_PORT
 def get_node_id(neighbors, port):
 	for n in neighbors:
 		if neighbors[n][1] == port:
 			return n
+def my_id():
+	return NODE_ID
+def my_port():
+	return NODE_PORT
 
 #processes the config file
 #returns a dictionary of neighbors in the form (cost, port)
