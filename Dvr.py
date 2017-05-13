@@ -3,7 +3,7 @@
 #Implements the distance vector routing protocol over UDP
 #Python 2.7 has been used (the #! line should default to version 2.7)
 
-import sys, re, os, time, select
+import sys, re, os, time, select, collections
 from socket import *
 
 DEBUG = 0
@@ -35,19 +35,23 @@ def main():
 		sys.exit(1)
 
 	try:
-		main_loop(neighbors, num_neighbors, my_dist, my_dv, sock)
+		main_loop(neighbors, my_dist, my_dv, sock)
 	except KeyboardInterrupt:
 		sock.close()
 		sys.exit(0)
 
 #implements the main logic for the DVR protocol at this router
-def main_loop(neighbors, num_neighbors, my_dist, my_dv, sock):
+def main_loop(neighbors, my_dist, my_dv, sock):
 	last_advert = 0 #node hasn't shared dv yet - set to beginning of time
-	dv_changed = {} #tracks whether the last advert from a router changed the dv
+	dv_changed = collections.defaultdict(list) #tracks whether the last advert from a router changed the dv
 	printed_dv = False #ensures a particular stable dv is only printed once
 	next_hop = {} #stores the next node in the shortest path to each router
+	heartbeats = collections.defaultdict(int) #tracks # of missed heartbeats from each node
 
 	while 1:
+		dead_routers = [] #collects dead routers for later processing
+		delayed_dv_adverts = [] #collects dv adverts if they come before heartbeat messages
+
 		#notify neighbors every TIME_BETWEEN_ADVERTS seconds
 		current_time = int(time.time())
 		if current_time - last_advert > TIME_BETWEEN_ADVERTS:
@@ -58,11 +62,43 @@ def main_loop(neighbors, num_neighbors, my_dist, my_dv, sock):
 				print msg
 			for n in neighbors:
 				sock.sendto(msg, ('', get_port(neighbors, n)))
+				data, addr = sock.recvfrom(1024)
+#				print '### start:'
+#				print data, addr
+#				print '### end'
+				if data.startswith('I am alive!'):
+					"""
+					sender_id = get_node_id(neighbors, addr[1])
+					if sender_id == n:
+						heartbeats[n] = 0 #node is still alive - reset count
+					else:
+						heartbeats[sender_id] = 0 #some other node's heartbeat got delayed
+						heartbeats[n] += 1
+						if heartbeats[n] == KEEP_ALIVE_THRESHOLD:
+							dead_routers.append(n)
+#							if DEBUG:
+							print '###########################'
+							print "%s's neighbor: router %s died" %(my_id(), n)
+							print '###########################'
+					"""
+				else:
+					delayed_dv_adverts.append((data, addr))
 
-		#check if another node has advertised their dv table
-		available = select.select([sock], [], [], 0)
-		if available[0]:
-			data, addr = sock.recvfrom(1024)
+		#remove dead routers from dist and dv tables
+		"""
+		for dead in dead_routers:
+			del my_dist[dead]
+			for router in my_dist:
+				del my_dist[router][dead]
+			my_dv, next_hop = recompute_dv(my_dist)
+#			printed_dv = False #allow dv to be printed again
+		"""
+
+		#check if a neighboring node has advertised their dv table
+#		available = select.select([sock], [], [], 0)
+#		if available[0]:
+#			data, addr = sock.recvfrom(1024)
+		for data, addr in delayed_dv_adverts:
 			received_dv = process_dv_table(data) #TODO
 			sender_id = get_node_id(neighbors, addr[1])
 			my_dist = recompute_dist(neighbors, my_dist, received_dv, sender_id)
@@ -76,14 +112,17 @@ def main_loop(neighbors, num_neighbors, my_dist, my_dv, sock):
 
 			#update the change status of the dv from the current sender
 			if my_dv != old_dv:
-				dv_changed[sender_id] = True
-				if printed_dv == True:
-					printed_dv = False #allow dv to be printed again
+				dv_changed[sender_id].append(True)
+#				if printed_dv == True:
+#					printed_dv = False #allow dv to be printed again
 			else:
-				dv_changed[sender_id] = False
+				dv_changed[sender_id].append(False)
+
+			#send heartbeat msg to sender
+			sock.sendto('I am alive!', addr)
 
 		#print dv if dv is considered stable; stability is detected when
-		#the last advert from all nodes has not changed the dv
+		#the last two adverts from all nodes have not changed the dv
 		if printed_dv == False and is_dv_stable(neighbors, dv_changed):
 			printed_dv = True
 			print "Router %s's DV table:" %my_id()
@@ -189,8 +228,10 @@ def is_dv_stable(neighbors, dv_changed):
 	for n in neighbors:
 		if not n in dv_changed:
 			return False #don't assume anything until at least one advert
-		elif dv_changed[n]:
-			return False
+		elif dv_changed[n][len(dv_changed[n])-1]:
+			return False #last dv advert changed this nodes' dv
+		elif len(dv_changed[n]) > 1 and dv_changed[n][len(dv_changed[n])-2]:
+			return False #2nd-last dv advert changed this nodes' dv
 	return True
 
 #getters
@@ -202,6 +243,7 @@ def get_node_id(neighbors, port):
 	for n in neighbors:
 		if neighbors[n][1] == port:
 			return n
+	return None
 def my_id():
 	return NODE_ID
 def my_port():
@@ -254,5 +296,6 @@ if __name__ == '__main__':
 
 	#globals
 	TIME_BETWEEN_ADVERTS = 5
+	KEEP_ALIVE_THRESHOLD = 3
 
 	main()
