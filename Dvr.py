@@ -12,8 +12,8 @@ def main():
 	#get neighbors for this node
 	neighbors, num_neighbors = process_config_file(CONFIG_FILE)
 	if DEBUG:
+		print 'I have', num_neighbors, 'neighbors'
 		print 'My neighbors:'
-		print num_neighbors
 		for n in neighbors:
 			print n, get_cost(neighbors, n), get_port(neighbors, n)
 
@@ -22,7 +22,7 @@ def main():
 	if DEBUG:
 		print 'My dist table:'
 		for node in my_dist:
-			print node, my_dist[node]
+			print 'Via', node + ':', my_dist[node]
 
 	#initialise dv table for this node
 	my_dv = initialise_dv(neighbors)
@@ -30,8 +30,6 @@ def main():
 		print 'My DV table:'
 		for node in my_dv:
 			print node, my_dv[node]
-
-	sys.exit(0) #TODO
 
 	#create new udp socket for this node
 	try:
@@ -47,14 +45,15 @@ def main():
 	while 1:
 		try:
 
-			#notify neighbors every 5 seconds
+			#notify neighbors every TIME_BETWEEN_ADVERTS seconds
 			current_time = int(time.time())
-			if current_time - last_advert > 5:
+			if current_time - last_advert > TIME_BETWEEN_ADVERTS:
 				last_advert = current_time
 				msg = str(my_dv) #TODO
 				if DEBUG:
+					print 'Sending...'
 					print msg
-				for n in neighbors:
+				for n in neighbors: #TODO
 					sock.sendto(msg, ('', get_port(neighbors, n)))
 
 			#check if another node has advertised their dv table
@@ -62,8 +61,14 @@ def main():
 			if available[0]:
 				data, addr = sock.recvfrom(1024)
 				received_dv = process_dv_table(data) #TODO
-				sender_id = get_id(addr) #TODO
+#				if DEBUG:
+#					print 'Received from ' + str(addr)
+				sender_id = get_node_id(neighbors, addr[1])
 				my_dist = recompute_dist(neighbors, my_dist, received_dv, sender_id)
+#				if DEBUG:
+#					print 'My dist table:'
+#					for node in my_dist:
+#						print 'Via', node + ':', my_dist[node]
 				my_dv = recompute_dv(my_dist, my_dv)
 
 		except KeyboardInterrupt:
@@ -94,7 +99,7 @@ def initialise_dist(neighbors):
 			if n == m:
 				dist[n][m] = get_cost(neighbors, m)
 			else:
-				dist[n][m] = float("infinity") #not direct neighbor
+				dist[n][m] = float('infinity') #not direct neighbor
 	return dist
 
 #returns initial dv table based on the direct neighbors
@@ -117,20 +122,33 @@ def recompute_dist(neighbors, my_dist, received_dv, sender_id):
 		if node in received_dv:
 			my_dist[sender_id][node] = cost_to_sender + received_dv[node]
 		else:
-			my_dist[sender_id][node] = 0 #TODO
+			my_dist[sender_id][node] = 0 #no path to this node anymore #TODO
+	return my_dist
 
 #updates the dv table based on the current dist table
 def recompute_dv(my_dist, my_dv):
-	pass #TODO
+	#pass #TODO
+	#TODO: doesn't actually need the current dv?
 
-	known_nodes = []
-	for n in dist:
-		known_nodes.append(n)
-		for m in dist:
-			if not m in known_nodes:
-				known_nodes.append(m)
-	for n in dist:
-		pass #TODO
+	#create a new dv with max cost to all known nodes
+	dv = {}
+#	known_nodes = []
+	for n in my_dist:
+		dv[n] = float('infinity')
+#		known_nodes.append(n)
+		for m in my_dist:
+			dv[n] = float('infinity')
+#			if not m in known_nodes:
+#				known_nodes.append(m)
+#	known_nodes = list(set(known_nodes))
+
+	#select smallest cost to each known node
+#	dv = {}
+	for n in my_dist:
+		for dest in dv: #known_nodes:
+			if dest in my_dist[n]:
+				if my_dist[n][dest] < dv[dest]:
+					dv[dest] = my_dist[n][dest]
 
 	return dv
 
@@ -143,6 +161,10 @@ def my_id():
 	return NODE_ID
 def my_port():
 	return NODE_PORT
+def get_node_id(neighbors, port):
+	for n in neighbors:
+		if neighbors[n][1] == port:
+			return n
 
 #processes the config file
 #returns a dictionary of neighbors in the form (cost, port)
@@ -171,7 +193,7 @@ if __name__ == '__main__':
 
 	#require 3 or 4 args
 	if len(sys.argv) != 4 and len(sys.argv) != 5:
-		args = "<node id> <node port> <config file> [-P]"
+		args = '<node id> <node port> <config file> [-P]'
 		print >>sys.stderr, 'Usage:', sys.argv[0], args
 		sys.exit(1)
 
@@ -188,5 +210,8 @@ if __name__ == '__main__':
 	NODE_ID = sys.argv[1]
 	NODE_PORT = int(sys.argv[2])
 	CONFIG_FILE = sys.argv[3]
+
+	#globals
+	TIME_BETWEEN_ADVERTS = 5
 
 	main()
