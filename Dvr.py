@@ -94,7 +94,7 @@ def main():
 			if printed_dv == False and is_dv_stable(neighbors, dv_changed):
 				printed_dv = True
 				print "Router %s's DV table:" %my_id()
-				for node in my_dv:
+				for node in sorted(my_dv):
 					print 'shortest path to node %s:' %node,
 					print 'the next hop is %s' %next_hop[node],
 					print 'and the cost is %.1f' %my_dv[node]
