@@ -1,0 +1,36 @@
+Router D's DV table:
+shortest path to node A: the next hop is A and the cost is 1.0
+shortest path to node B: the next hop is B and the cost is 2.0
+shortest path to node C: the next hop is E and the cost is 2.0
+shortest path to node E: the next hop is E and the cost is 1.0
+shortest path to node F: the next hop is E and the cost is 3.0
+Router B's DV table:
+shortest path to node A: the next hop is A and the cost is 2.0
+shortest path to node C: the next hop is C and the cost is 3.0
+shortest path to node D: the next hop is D and the cost is 2.0
+shortest path to node E: the next hop is D and the cost is 3.0
+shortest path to node F: the next hop is D and the cost is 5.0
+Router A's DV table:
+shortest path to node B: the next hop is B and the cost is 2.0
+shortest path to node C: the next hop is D and the cost is 3.0
+shortest path to node D: the next hop is D and the cost is 1.0
+shortest path to node E: the next hop is D and the cost is 2.0
+shortest path to node F: the next hop is D and the cost is 4.0
+Router E's DV table:
+shortest path to node A: the next hop is D and the cost is 2.0
+shortest path to node B: the next hop is D and the cost is 3.0
+shortest path to node C: the next hop is C and the cost is 1.0
+shortest path to node D: the next hop is D and the cost is 1.0
+shortest path to node F: the next hop is F and the cost is 2.0
+Router F's DV table:
+shortest path to node A: the next hop is E and the cost is 4.0
+shortest path to node B: the next hop is E and the cost is 5.0
+shortest path to node C: the next hop is E and the cost is 3.0
+shortest path to node D: the next hop is E and the cost is 3.0
+shortest path to node E: the next hop is E and the cost is 2.0
+Router C's DV table:
+shortest path to node A: the next hop is E and the cost is 3.0
+shortest path to node B: the next hop is B and the cost is 3.0
+shortest path to node D: the next hop is E and the cost is 2.0
+shortest path to node E: the next hop is E and the cost is 1.0
+shortest path to node F: the next hop is E and the cost is 3.0

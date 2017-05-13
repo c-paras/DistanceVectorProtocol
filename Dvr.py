@@ -13,26 +13,19 @@ def main():
 	#get neighbors for this node
 	neighbors, num_neighbors = process_config_file(CONFIG_FILE)
 	if DEBUG:
-		print 'I have', num_neighbors, 'neighbors'
-		print 'My neighbors:'
-		for n in neighbors:
-			print n, get_cost(neighbors, n), get_port(neighbors, n)
+		print_neighbors(num_neighbors, neighbors)
 
 	#initialise dist table for this node
 	my_dist = initialise_dist(neighbors)
 	if DEBUG:
-		print 'My dist table:'
-		for node in my_dist:
-			print 'Via', node + ':', my_dist[node]
+		print_dist_table(my_dist)
 
 	#initialise dv table for this node
 	my_dv = initialise_dv(neighbors)
 	if DEBUG:
-		print 'My DV table:'
-		for node in my_dv:
-			print node, my_dv[node]
+		print_dv_table(my_dv)
 
-	#create new udp socket for this node
+	#create new UDP socket for this node
 	try:
 		sock = socket(AF_INET, SOCK_DGRAM)
 		sock.bind(('', my_port()))
@@ -41,67 +34,63 @@ def main():
 		sock.close()
 		sys.exit(1)
 
+	try:
+		main_loop(neighbors, num_neighbors, my_dist, my_dv, sock)
+	except KeyboardInterrupt:
+		sock.close()
+		sys.exit(0)
+
+#implements the main logic for the DVR protocol at this router
+def main_loop(neighbors, num_neighbors, my_dist, my_dv, sock):
 	last_advert = 0 #node hasn't shared dv yet - set to beginning of time
 	dv_changed = {} #tracks whether the last advert from a router changed the dv
 	printed_dv = False #ensures a particular stable dv is only printed once
 	next_hop = {} #stores the next node in the shortest path to each router
 
 	while 1:
-		try:
+		#notify neighbors every TIME_BETWEEN_ADVERTS seconds
+		current_time = int(time.time())
+		if current_time - last_advert > TIME_BETWEEN_ADVERTS:
+			last_advert = current_time
+			msg = str(my_dv) #TODO
+			if DEBUG:
+				print my_id(), 'sending:'
+				print msg
+			for n in neighbors:
+				sock.sendto(msg, ('', get_port(neighbors, n)))
 
-			#notify neighbors every TIME_BETWEEN_ADVERTS seconds
-			current_time = int(time.time())
-			if current_time - last_advert > TIME_BETWEEN_ADVERTS:
-				last_advert = current_time
-				msg = str(my_dv) #TODO
-				if DEBUG:
-					print my_id(), 'sending:'
-					print msg
-				for n in neighbors:
-					sock.sendto(msg, ('', get_port(neighbors, n)))
+		#check if another node has advertised their dv table
+		available = select.select([sock], [], [], 0)
+		if available[0]:
+			data, addr = sock.recvfrom(1024)
+			received_dv = process_dv_table(data) #TODO
+			sender_id = get_node_id(neighbors, addr[1])
+			my_dist = recompute_dist(neighbors, my_dist, received_dv, sender_id)
+			old_dv = my_dv
+			my_dv, next_hop = recompute_dv(my_dist)
 
-			#check if another node has advertised their dv table
-			available = select.select([sock], [], [], 0)
-			if available[0]:
-				data, addr = sock.recvfrom(1024)
-				received_dv = process_dv_table(data) #TODO
-				if DEBUG:
-					print my_id() + ' received from ' + str(addr)
-				sender_id = get_node_id(neighbors, addr[1])
-				my_dist = recompute_dist(neighbors, my_dist, received_dv, sender_id)
-				if DEBUG:
-					print 'My dist table:'
-					for node in my_dist:
-						print 'Via', node + ':', my_dist[node]
+			if DEBUG:
+				print my_id() + ' received from ' + str(addr)
+				print_dist_table(my_dist)
+				print_dv_table(my_dv)
 
-				old_dv = my_dv
-				my_dv, next_hop = recompute_dv(my_dist)
-				if DEBUG:
-					print 'My DV table:'
-					for node in my_dv:
-						print node, my_dv[node]
+			#update the change status of the dv from the current sender
+			if my_dv != old_dv:
+				dv_changed[sender_id] = True
+				if printed_dv == True:
+					printed_dv = False #allow dv to be printed again
+			else:
+				dv_changed[sender_id] = False
 
-				#update the change status of the dv from the current sender
-				if my_dv != old_dv:
-					dv_changed[sender_id] = True
-					if printed_dv == True:
-						printed_dv = False #allow dv to be printed again
-				else:
-					dv_changed[sender_id] = False
-
-			#print dv if dv is considered stable; stability is detected when
-			#the last advert from all nodes has not changed the dv
-			if printed_dv == False and is_dv_stable(neighbors, dv_changed):
-				printed_dv = True
-				print "Router %s's DV table:" %my_id()
-				for node in sorted(my_dv):
-					print 'shortest path to node %s:' %node,
-					print 'the next hop is %s' %next_hop[node],
-					print 'and the cost is %.1f' %my_dv[node]
-
-		except KeyboardInterrupt:
-			sock.close()
-			sys.exit(0)
+		#print dv if dv is considered stable; stability is detected when
+		#the last advert from all nodes has not changed the dv
+		if printed_dv == False and is_dv_stable(neighbors, dv_changed):
+			printed_dv = True
+			print "Router %s's DV table:" %my_id()
+			for node in sorted(my_dv):
+				print 'shortest path to node %s:' %node,
+				print 'the next hop is %s' %next_hop[node],
+				print 'and the cost is %.1f' %my_dv[node]
 
 """
 8 wait (until A sees a link cost change to neighbor V /* case 1 */
@@ -117,6 +106,25 @@ def main():
 16 send mindist(A, *) to all neighbors
 17 forever
 """
+
+#prints number of neighbors and cost to each neighbor for debugging
+def print_neighbors(num_neighbors, neighbors):
+	print 'I have', num_neighbors, 'neighbors'
+	print 'My neighbors:'
+	for n in neighbors:
+		print n, get_cost(neighbors, n), get_port(neighbors, n)
+
+#prints dist table for debugging
+def print_dist_table(my_dist):
+	print 'My dist table:'
+	for node in my_dist:
+		print 'Via', node + ':', my_dist[node]
+
+#prints dv table for debugging
+def print_dv_table(my_dv):
+	print 'My DV table:'
+	for node in my_dv:
+		print node, my_dv[node]
 
 #returns initial dist table based on the direct neighbors
 def initialise_dist(neighbors):
