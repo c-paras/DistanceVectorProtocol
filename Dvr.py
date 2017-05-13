@@ -47,27 +47,25 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 	printed_dv = False #ensures a particular stable dv is only printed once
 	next_hop = {} #stores the next node in the shortest path to each router
 	heartbeats = collections.defaultdict(int) #tracks # of missed heartbeats from each node
+	most_recent_dvs = {} #stores most-recent dv from each neighbor
+	dead_routers = []
 
 	while 1:
-		dead_routers = [] #collects dead routers for later processing
+		dead_neighbors = [] #collects dead routers for later processing
 		delayed_dv_adverts = [] #collects dv adverts if they come before heartbeat messages
 
 		#notify neighbors every TIME_BETWEEN_ADVERTS seconds
 		current_time = int(time.time())
 		if current_time - last_advert > TIME_BETWEEN_ADVERTS:
 			last_advert = current_time
-			msg = str(my_dv) #TODO
+			msg = str(my_dv)
 			if DEBUG:
 				print my_id(), 'sending:'
 				print msg
 			for n in neighbors:
 				sock.sendto(msg, ('', get_port(neighbors, n)))
 				data, addr = sock.recvfrom(1024)
-#				print '### start:'
-#				print data, addr
-#				print '### end'
 				if data.startswith('I am alive!'):
-					"""
 					sender_id = get_node_id(neighbors, addr[1])
 					if sender_id == n:
 						heartbeats[n] = 0 #node is still alive - reset count
@@ -75,40 +73,63 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 						heartbeats[sender_id] = 0 #some other node's heartbeat got delayed
 						heartbeats[n] += 1
 						if heartbeats[n] == KEEP_ALIVE_THRESHOLD:
+							dead_neighbors.append(n)
 							dead_routers.append(n)
 #							if DEBUG:
 							print '###########################'
 							print "%s's neighbor: router %s died" %(my_id(), n)
 							print '###########################'
-					"""
+#					"""
 				else:
 					delayed_dv_adverts.append((data, addr))
+					if get_node_id(neighbors, addr[1]) == n:
+						heartbeats[n] = 0 #still alive - due to a dv table advert
 
 		#remove dead routers from dist and dv tables
-		"""
-		for dead in dead_routers:
+		for dead in dead_neighbors:
+			del neighbors[dead]
+			del dv_changed[dead]
+			del heartbeats[dead]
+			del most_recent_dvs[dead]
 			del my_dist[dead]
 			for router in my_dist:
 				del my_dist[router][dead]
 			my_dv, next_hop = recompute_dv(my_dist)
-#			printed_dv = False #allow dv to be printed again
-		"""
+			printed_dv = False #allow dv to be printed again
 
 		#check if a neighboring node has advertised their dv table
 #		available = select.select([sock], [], [], 0)
 #		if available[0]:
 #			data, addr = sock.recvfrom(1024)
 		for data, addr in delayed_dv_adverts:
-			received_dv = process_dv_table(data) #TODO
+			received_dv = process_dv_table(data, dead_routers)
 			sender_id = get_node_id(neighbors, addr[1])
+
+			#update most-recent dv from this neighbor
+			if not sender_id in most_recent_dvs:
+				most_recent_dvs[sender_id] = received_dv
+			else:
+				old_most_recent = most_recent_dvs[sender_id]
+				most_recent_dvs[sender_id] = received_dv
+				dead = infer_dead_routers(old_most_recent, received_dv)
+				for d in dead:
+#					if DEBUG:
+					print '%s knows that %s is dead' %(my_id(), d)
+					dead_routers.append(d) #append to list of known dead routers
+					printed_dv = False #a router must have died - re-enable printing
+					#TODO: modularise & refactor!
+					if d in neighbors: del neighbors[d]
+					if d in dv_changed: del dv_changed[d]
+					if d in heartbeats: del heartbeats[d]
+					if d in most_recent_dvs: del most_recent_dvs[d]
+					if d in my_dist: del my_dist[d]
+					for router in my_dist:
+						if d in my_dist[router]: del my_dist[router][d]
+					printed_dv = False #allow dv to be printed again
+
 			my_dist = recompute_dist(neighbors, my_dist, received_dv, sender_id)
 			old_dv = my_dv
 			my_dv, next_hop = recompute_dv(my_dist)
-
-			if DEBUG:
-				print my_id() + ' received from ' + str(addr)
-				print_dist_table(my_dist)
-				print_dv_table(my_dv)
 
 			#update the change status of the dv from the current sender
 			if my_dv != old_dv:
@@ -117,6 +138,11 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 #					printed_dv = False #allow dv to be printed again
 			else:
 				dv_changed[sender_id].append(False)
+
+			if DEBUG:
+				print my_id() + ' received from ' + str(addr)
+				print_dist_table(my_dist)
+				print_dv_table(my_dv)
 
 			#send heartbeat msg to sender
 			sock.sendto('I am alive!', addr)
@@ -184,9 +210,14 @@ def initialise_dv(neighbors):
 		dv[n] = get_cost(neighbors, n)
 	return dv
 
-#converts a received message into a dictionary
-def process_dv_table(msg):
-	return eval(msg) #TODO
+#converts a received message into a dictionary, ignoring any dead routers
+def process_dv_table(msg, dead_routers):
+	dv = eval(msg)
+	filtered_dv = {}
+	for router_id in dv:
+		if not router_id in dead_routers:
+			filtered_dv[router_id] = dv[router_id]
+	return filtered_dv
 
 #updates the dist table based on the received dv table
 def recompute_dist(neighbors, my_dist, received_dv, sender_id):
@@ -233,6 +264,16 @@ def is_dv_stable(neighbors, dv_changed):
 		elif len(dv_changed[n]) > 1 and dv_changed[n][len(dv_changed[n])-2]:
 			return False #2nd-last dv advert changed this nodes' dv
 	return True
+
+#returns a list of all routers in the old dv and not the new dv
+#this condition implies that the router has failed
+#the reverse is not true - if the dv grows, then new router(s) were discovered
+def infer_dead_routers(old_most_recent, received_dv):
+	dead_nodes = []
+	for node in old_most_recent:
+		if not node in received_dv:
+			dead_nodes.append(node)
+	return dead_nodes
 
 #getters
 def get_cost(neighbors, node_id):
