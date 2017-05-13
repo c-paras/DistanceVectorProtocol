@@ -185,7 +185,7 @@ def process_config_file(filename):
 			neighbors[node_id] = (float(cost), int(node_port))
 		return (neighbors, num_neighbors)
 	else:
-		print >>sys.stderr, sys.argv[0] + ': cannot read', filename
+		print >>sys.stderr, "%s: cannot read '%s'" %(sys.argv[0], filename)
 		sys.exit(1)
 
 if __name__ == '__main__':
@@ -198,12 +198,12 @@ if __name__ == '__main__':
 
 	#id must be a capital letter
 	if not (len(sys.argv[1]) == 1 and sys.argv[1].isupper()):
-		print >>sys.stderr, sys.argv[0] + ': invalid id'
+		print >>sys.stderr, "%s: invalid id '%s'" %(sys.argv[0], sys.argv[1])
 		sys.exit(1)
 
 	#port # must be non-negative
 	if not sys.argv[2].isdigit():
-		print >>sys.stderr, sys.argv[0] + ': invalid port number'
+		print >>sys.stderr, "%s: invalid port number '%s'" %(sys.argv[0], sys.argv[2])
 		sys.exit(1)
 
 	NODE_ID = sys.argv[1]
