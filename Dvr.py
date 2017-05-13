@@ -52,9 +52,9 @@ def main():
 				last_advert = current_time
 				msg = str(my_dv) #TODO
 				if DEBUG:
-					print 'Sending...'
+					print my_id(), 'sending...'
 					print msg
-				for n in neighbors: #TODO
+				for n in neighbors:
 					sock.sendto(msg, ('', get_port(neighbors, n)))
 
 			#check if another node has advertised their dv table
@@ -62,15 +62,20 @@ def main():
 			if available[0]:
 				data, addr = sock.recvfrom(1024)
 				received_dv = process_dv_table(data) #TODO
-#				if DEBUG:
-#					print 'Received from ' + str(addr)
+				if DEBUG:
+					print 'Received from ' + str(addr)
 				sender_id = get_node_id(neighbors, addr[1])
 				my_dist = recompute_dist(neighbors, my_dist, received_dv, sender_id)
-#				if DEBUG:
-#					print 'My dist table:'
-#					for node in my_dist:
-#						print 'Via', node + ':', my_dist[node]
-				my_dv = recompute_dv(my_dist, my_dv)
+				if DEBUG:
+					print 'My dist table:'
+					for node in my_dist:
+						print 'Via', node + ':', my_dist[node]
+
+				my_dv = recompute_dv(my_dist)
+				if DEBUG:
+					print 'My DV table:'
+					for node in my_dv:
+						print node, my_dv[node]
 
 		except KeyboardInterrupt:
 			sock.close()
@@ -123,35 +128,23 @@ def recompute_dist(neighbors, my_dist, received_dv, sender_id):
 		if node == my_id():
 			continue
 		else:
-		#	if node == 'B':
-#				print received_dv[node], my_dist[sender_id][node]
-#			else:
 			my_dist[sender_id][node] = cost_to_sender + received_dv[node]
-#	else:
-#		pass #my_dist[sender_id][node] = 0 #no path to this node anymore #TODO
+
 	return my_dist
 
 #updates the dv table based on the current dist table
-def recompute_dv(my_dist, my_dv):
-	#pass #TODO
-	#TODO: doesn't actually need the current dv?
+def recompute_dv(my_dist):
 
 	#create a new dv with max cost to all known nodes
 	dv = {}
-#	known_nodes = []
 	for n in my_dist:
 		dv[n] = float('infinity')
-#		known_nodes.append(n)
 		for m in my_dist[n]:
 			dv[m] = float('infinity')
-#			if not m in known_nodes:
-#				known_nodes.append(m)
-#	known_nodes = list(set(known_nodes))
 
 	#select smallest cost to each known node
-#	dv = {}
 	for n in my_dist:
-		for dest in dv: #known_nodes:
+		for dest in dv:
 			if dest in my_dist[n]:
 				if my_dist[n][dest] < dv[dest]:
 					dv[dest] = my_dist[n][dest]
