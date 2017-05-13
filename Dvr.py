@@ -44,6 +44,7 @@ def main():
 	last_advert = 0 #node hasn't shared dv yet - set to beginning of time
 	dv_changed = {} #tracks whether the last advert from a router changed the dv
 	printed_dv = False #ensures a particular stable dv is only printed once
+	next_hop = {} #stores the next node in the shortest path to each router
 
 	while 1:
 		try:
@@ -65,7 +66,7 @@ def main():
 				data, addr = sock.recvfrom(1024)
 				received_dv = process_dv_table(data) #TODO
 				if DEBUG:
-					print 'Received from ' + str(addr)
+					print my_id() + ' received from ' + str(addr)
 				sender_id = get_node_id(neighbors, addr[1])
 				my_dist = recompute_dist(neighbors, my_dist, received_dv, sender_id)
 				if DEBUG:
@@ -74,7 +75,7 @@ def main():
 						print 'Via', node + ':', my_dist[node]
 
 				old_dv = my_dv
-				my_dv = recompute_dv(my_dist)
+				my_dv, next_hop = recompute_dv(my_dist)
 				if DEBUG:
 					print 'My DV table:'
 					for node in my_dv:
@@ -88,13 +89,15 @@ def main():
 				else:
 					dv_changed[sender_id] = False
 
-				#print dv if dv is considered stable; stability is detected when
-				#the last advert from all nodes has not changed the dv
-				if printed_dv == False and is_dv_stable(neighbors, dv_changed):
-					printed_dv = True
-					print "Router %s's DV table:" %my_id()
-					for node in my_dv:
-						print node, my_dv[node]
+			#print dv if dv is considered stable; stability is detected when
+			#the last advert from all nodes has not changed the dv
+			if printed_dv == False and is_dv_stable(neighbors, dv_changed):
+				printed_dv = True
+				print "Router %s's DV table:" %my_id()
+				for node in my_dv:
+					print 'shortest path to node %s:' %node,
+					print 'the next hop is %s' %next_hop[node],
+					print 'and the cost is %.1f' %my_dv[node]
 
 		except KeyboardInterrupt:
 			sock.close()
@@ -152,6 +155,7 @@ def recompute_dist(neighbors, my_dist, received_dv, sender_id):
 	return my_dist
 
 #updates the dv table based on the current dist table
+#also returns the next hop in the path to each destination
 def recompute_dv(my_dist):
 
 	#create a new dv with max cost to all known nodes
@@ -162,13 +166,15 @@ def recompute_dv(my_dist):
 			dv[m] = float('infinity')
 
 	#select smallest cost to each known node
-	for n in my_dist:
+	next_hop = {}
+	for via in my_dist:
 		for dest in dv:
-			if dest in my_dist[n]:
-				if my_dist[n][dest] < dv[dest]:
-					dv[dest] = my_dist[n][dest]
+			if dest in my_dist[via]:
+				if my_dist[via][dest] < dv[dest]:
+					dv[dest] = my_dist[via][dest]
+					next_hop[dest] = via
 
-	return dv
+	return (dv, next_hop)
 
 #returns True if the dv is stable; False otherwise
 def is_dv_stable(neighbors, dv_changed):
