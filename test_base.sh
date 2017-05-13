@@ -27,6 +27,7 @@ done
 
 echo
 echo "Press any key to terminate all routers"
+echo
 while true
 do
 	read res
@@ -35,4 +36,4 @@ do
 		break
 	fi
 done
-kill `pgrep $prog`
+kill `pgrep $prog` 2> /dev/null
