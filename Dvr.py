@@ -81,14 +81,7 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 
 		#remove dead routers from dist and dv tables
 		for dead in dead_neighbors:
-			del neighbors[dead]
-			del dv_changed[dead]
-			del last_heartbeat[dead]
-			del next_hop[dead]
-			del most_recent_dvs[dead]
-			del my_dist[dead]
-			for router in my_dist:
-				del my_dist[router][dead]
+			forget_dead_router(dead, neighbors, dv_changed, last_heartbeat, next_hop, most_recent_dvs, my_dist)
 			my_dv, next_hop = recompute_dv(my_dist)
 			printed_dv = False #allow dv to be printed again
 
@@ -106,25 +99,15 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 			else:
 				old_most_recent = most_recent_dvs[sender_id]
 				most_recent_dvs[sender_id] = received_dv
-				dead = infer_dead_routers(old_most_recent, received_dv)
-				for d in dead:
+				deduced_dead = infer_dead_routers(old_most_recent, received_dv)
+				for dead in deduced_dead:
 					if DEBUG:
 						print '%s knows that %s is dead' %(my_id(), d)
-					if d in dead_routers:
+					if dead in dead_routers:
 						continue #avoid double-printing at the failed router's neighbors
-					dead_routers.append(d) #append to list of known dead routers
+					dead_routers.append(dead) #append to list of known dead routers
 					printed_dv = False #a router must have died - re-enable printing
-
-					#TODO: modularise & refactor!
-					#the if statements are needed just in case multiple senders indicate the node has failed!
-					if d in neighbors: del neighbors[d]
-					if d in dv_changed: del dv_changed[d]
-					if d in last_heartbeat: del last_heartbeat[d]
-					if d in next_hop: del next_hop[d]
-					if d in most_recent_dvs: del most_recent_dvs[d]
-					if d in my_dist: del my_dist[d]
-					for router in my_dist:
-						if d in my_dist[router]: del my_dist[router][d]
+					forget_dead_router(dead, neighbors, dv_changed, last_heartbeat, next_hop, most_recent_dvs, my_dist)
 
 			my_dist = recompute_dist(neighbors, my_dist, received_dv, sender_id)
 			old_dv = my_dv
@@ -270,6 +253,18 @@ def infer_dead_routers(old_most_recent, received_dv):
 		if not node in received_dv:
 			dead_nodes.append(node)
 	return dead_nodes
+
+#clears any state associated with a router known to be dead
+#the extra checks are necessary in case mutliple neighbors suggest a failed node
+def forget_dead_router(d, neighbors, dv_changed, last_heartbeat, next_hop, most_recent_dvs, my_dist):
+	if d in neighbors: del neighbors[d]
+	if d in dv_changed: del dv_changed[d]
+	if d in last_heartbeat: del last_heartbeat[d]
+	if d in next_hop: del next_hop[d]
+	if d in most_recent_dvs: del most_recent_dvs[d]
+	if d in my_dist: del my_dist[d]
+	for router in my_dist:
+		if d in my_dist[router]: del my_dist[router][d]
 
 #getters
 def get_cost(neighbors, node_id):
