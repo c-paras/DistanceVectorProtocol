@@ -65,14 +65,8 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 			for n in neighbors:
 				sock.sendto(msg, ('', get_port(neighbors, n)))
 				data, addr = sock.recvfrom(1024)
-				if data.startswith('I am alive!'):
-					sender_id = get_node_id(neighbors, addr[1])
-					if sender_id == n:
-						heartbeats[n] = 0 #node is still alive - reset count
-					else:
-						heartbeats[sender_id] = 0 #some other node's heartbeat got delayed
-						heartbeats[n] += 1
-						if heartbeats[n] == KEEP_ALIVE_THRESHOLD:
+				if current_time - last_heartbeat[n] > KEEP_ALIVE_THRESHOLD:
+					#node has dies - too long betwen heartbeats
 							dead_neighbors.append(n)
 							dead_routers.append(n)
 #							if DEBUG:
@@ -80,10 +74,10 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 							print "%s's neighbor: router %s died" %(my_id(), n)
 							print '###########################'
 #					"""
-				else:
-					delayed_dv_adverts.append((data, addr))
-					if get_node_id(neighbors, addr[1]) == n:
-						heartbeats[n] = 0 #still alive - due to a dv table advert
+#				else:
+#					delayed_dv_adverts.append((data, addr))
+#					if get_node_id(neighbors, addr[1]) == n:
+#						heartbeats[n] = 0 #still alive - due to a dv table advert
 
 		#remove dead routers from dist and dv tables
 		for dead in dead_neighbors:
@@ -99,9 +93,9 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 
 		#check if a neighboring node has advertised their dv table
 #		available = select.select([sock], [], [], 0)
-#		if available[0]:
-#			data, addr = sock.recvfrom(1024)
-		for data, addr in delayed_dv_adverts:
+		if available[0]:
+			data, addr = sock.recvfrom(1024)
+	#	for data, addr in delayed_dv_adverts:
 			received_dv = process_dv_table(data, dead_routers)
 			sender_id = get_node_id(neighbors, addr[1])
 
@@ -147,7 +141,7 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 				print_dv_table(my_dv)
 
 			#send heartbeat msg to sender
-			sock.sendto('I am alive!', addr)
+#			sock.sendto('I am alive!', addr)
 
 		#print dv if dv is considered stable; stability is detected when
 		#the last two adverts from all nodes have not changed the dv
@@ -339,6 +333,6 @@ if __name__ == '__main__':
 
 	#globals
 	TIME_BETWEEN_ADVERTS = 5
-	KEEP_ALIVE_THRESHOLD = 4
+	KEEP_ALIVE_THRESHOLD = TIME_BETWEEN_ADVERST * 3
 
 	main()
