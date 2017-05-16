@@ -115,6 +115,8 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 				for d in dead:
 #					if DEBUG:
 					print '%s knows that %s is dead' %(my_id(), d)
+					if d in dead_routers:
+						continue #avoid double-printing at the failed router's neighbors
 					dead_routers.append(d) #append to list of known dead routers
 					printed_dv = False #a router must have died - re-enable printing
 					#TODO: modularise & refactor!
@@ -337,6 +339,6 @@ if __name__ == '__main__':
 
 	#globals
 	TIME_BETWEEN_ADVERTS = 5
-	KEEP_ALIVE_THRESHOLD = 3
+	KEEP_ALIVE_THRESHOLD = 4
 
 	main()
