@@ -49,6 +49,9 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 	heartbeats = collections.defaultdict(int) #tracks # of missed heartbeats from each node
 	most_recent_dvs = {} #stores most-recent dv from each neighbor
 	dead_routers = []
+	last_heartbeat = {}
+	for n in neighbors:
+		last_heartbeat[n] = int(time.time()) #node just came alive
 
 	while 1:
 		dead_neighbors = [] #collects dead routers for later processing
@@ -64,15 +67,14 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 				print msg
 			for n in neighbors:
 				sock.sendto(msg, ('', get_port(neighbors, n)))
-				data, addr = sock.recvfrom(1024)
 				if current_time - last_heartbeat[n] > KEEP_ALIVE_THRESHOLD:
-					#node has dies - too long betwen heartbeats
-							dead_neighbors.append(n)
-							dead_routers.append(n)
-#							if DEBUG:
-							print '###########################'
-							print "%s's neighbor: router %s died" %(my_id(), n)
-							print '###########################'
+						#node has died - too long betwen heartbeats
+						dead_neighbors.append(n)
+						dead_routers.append(n)
+#						if DEBUG:
+						print '###########################'
+						print "%s's neighbor: router %s died" %(my_id(), n)
+						print '###########################'
 #					"""
 #				else:
 #					delayed_dv_adverts.append((data, addr))
@@ -92,12 +94,13 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 			printed_dv = False #allow dv to be printed again
 
 		#check if a neighboring node has advertised their dv table
-#		available = select.select([sock], [], [], 0)
+		available = select.select([sock], [], [], 0)
 		if available[0]:
 			data, addr = sock.recvfrom(1024)
 	#	for data, addr in delayed_dv_adverts:
 			received_dv = process_dv_table(data, dead_routers)
 			sender_id = get_node_id(neighbors, addr[1])
+			last_heartbeat[sender_id] = int(time.time())
 
 			#update most-recent dv from this neighbor
 			if not sender_id in most_recent_dvs:
@@ -333,6 +336,6 @@ if __name__ == '__main__':
 
 	#globals
 	TIME_BETWEEN_ADVERTS = 5
-	KEEP_ALIVE_THRESHOLD = TIME_BETWEEN_ADVERST * 3
+	KEEP_ALIVE_THRESHOLD = TIME_BETWEEN_ADVERTS * 3
 
 	main()
