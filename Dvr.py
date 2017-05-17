@@ -58,35 +58,6 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 		last_heartbeat[n] = int(time.time())
 
 	while 1:
-		dead_neighbors = [] #collects dead routers for later processing
-
-		#notify neighbors every TIME_BETWEEN_ADVERTS seconds
-		current_time = int(time.time())
-		if current_time - last_advert > TIME_BETWEEN_ADVERTS:
-			last_advert = current_time
-			msg = str(my_dv)
-			if DEBUG:
-				print my_id(), 'sending:'
-				print msg
-			for n in neighbors:
-				if current_time - last_heartbeat[n] > KEEP_ALIVE_THRESHOLD:
-						#neighbor has died - too long betwen heartbeats
-						dead_neighbors.append(n)
-						dead_routers.append(n)
-						if DEBUG:
-							print '###########################'
-							print "%s's neighbor: router %s died" %(my_id(), n)
-							print '###########################'
-				else:
-					#otherwise send dv to neighbor
-					sock.sendto(msg, ('', get_port(neighbors, n)))
-
-		#remove dead routers from dist and dv tables & clean up other node state
-		for dead in dead_neighbors:
-			forget_dead_router(dead, neighbors, dv_changed, last_heartbeat, next_hop, most_recent_dvs, my_dist)
-			my_dv, next_hop = recompute_dv(my_dist)
-			printed_dv = False #allow dv to be printed again
-
 		#check if a neighboring node has advertised their dv table
 		available = select.select([sock], [], [], 0)
 		if available[0]:
@@ -104,7 +75,7 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 				deduced_dead = infer_dead_routers(old_most_recent, received_dv)
 				for dead in deduced_dead:
 					if DEBUG:
-						print '%s knows that %s is dead' %(my_id(), d)
+						print '%s knows that %s is dead' %(my_id(), dead)
 					if dead in dead_routers:
 						continue #avoid double-printing at the failed router's neighbors
 					dead_routers.append(dead) #append to list of known dead routers
@@ -127,6 +98,38 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 				print my_id() + ' received from ' + str(addr)
 				print_dist_table(my_dist)
 				print_dv_table(my_dv)
+
+		dead_neighbors = [] #collects dead routers for later processing
+
+		#check for dead routers
+		current_time = int(time.time())
+		for n in neighbors:
+			if current_time - last_heartbeat[n] > KEEP_ALIVE_THRESHOLD:
+					#neighbor has died - too long betwen heartbeats
+					dead_neighbors.append(n)
+					dead_routers.append(n)
+					if DEBUG:
+						print '###########################'
+						print "%s's neighbor: router %s died" %(my_id(), n)
+						print '###########################'
+
+		#remove dead routers from dist and dv tables & clean up other node state
+		for dead in dead_neighbors:
+			forget_dead_router(dead, neighbors, dv_changed, last_heartbeat, next_hop, most_recent_dvs, my_dist)
+			my_dv, next_hop = recompute_dv(my_dist)
+			printed_dv = False #allow dv to be printed again
+
+		#notify neighbors every TIME_BETWEEN_ADVERTS seconds
+		current_time = int(time.time())
+		if current_time - last_advert > TIME_BETWEEN_ADVERTS:
+			last_advert = current_time
+			msg = str(my_dv)
+			if DEBUG:
+				print my_id(), 'sending:'
+				print msg
+			for n in neighbors:
+				#otherwise send dv to neighbor
+				sock.sendto(msg, ('', get_port(neighbors, n)))
 
 		#print dv if dv is considered stable - stability is detected when
 		#the last two adverts from all nodes have not changed the dv
