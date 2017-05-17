@@ -9,18 +9,12 @@ This application was built and tested on Ubuntu 64-bit 16.04 LTS using Python ve
 ```
 where `node id` is a single uppercase letter, `node port` is greater than 1023 and `config file` is a file describing the local topology of the node. If the `-P` flag is specified, then poisoned reverse is enabled; otherwise, it is disabled.
 * A valid `config file` has the following format:
-```
-3
-B 2 2001
-C 5 2002
-D 1 2003
-```
 	* The first line indicates the number of neighbors the node has
 	* Each line after that describes a particular neighbor, consisting of:
 		* The `node id` of that neighbor
 		* The cost to reach that neighbor
 		* The `node port` of that neighbor
-* Several topologies are provided in the directories `topology1`, `topology2` etc.
+* Several topologies are provided in the directories `topology1`, `topology2` etc. Each topology contains a file in the above format for each node.
 * To test basic distance vector routing, run
 ```
 ./test_base.sh <topology>
