@@ -58,7 +58,7 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 		last_heartbeat[n] = int(time.time())
 
 	#delays the detection of stability in the case of failed nodes being detected
-	#this ensures that a router receives updated info from all nodes before caliming stability
+	#this ensures that a router receives updated info from all nodes before claiming stability
 	stability_delay = 0
 
 	while 1:
