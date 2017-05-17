@@ -57,6 +57,10 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 	for n in neighbors:
 		last_heartbeat[n] = int(time.time())
 
+	#delays the detection of stability in the case of failed nodes being detected
+	#this ensures that a router receives updated info from all nodes before caliming stability
+	stability_delay = 0
+
 	while 1:
 		#check if a neighboring node has advertised their dv table
 		available = select.select([sock], [], [], 0)
@@ -74,6 +78,7 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 				most_recent_dvs[sender_id] = received_dv
 				deduced_dead = infer_dead_routers(old_most_recent, received_dv)
 				for dead in deduced_dead:
+					stability_delay += STABILITY_DELAY
 					if DEBUG:
 						print '%s knows that %s is dead' %(my_id(), dead)
 					if dead in dead_routers:
@@ -115,6 +120,7 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 
 		#remove dead routers from dist and dv tables & clean up other node state
 		for dead in dead_neighbors:
+			stability_delay += STABILITY_DELAY
 			forget_dead_router(dead, neighbors, dv_changed, last_heartbeat, next_hop, most_recent_dvs, my_dist)
 			my_dv, next_hop = recompute_dv(my_dist)
 			printed_dv = False #allow dv to be printed again
@@ -122,6 +128,8 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 		#notify neighbors every TIME_BETWEEN_ADVERTS seconds
 		current_time = int(time.time())
 		if current_time - last_advert > TIME_BETWEEN_ADVERTS:
+			if stability_delay > 0:
+				stability_delay -= 1
 			last_advert = current_time
 			msg = str(my_dv)
 			if DEBUG:
@@ -133,7 +141,7 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 
 		#print dv if dv is considered stable - stability is detected when
 		#the last two adverts from all nodes have not changed the dv
-		if printed_dv == False and is_dv_stable(neighbors, dv_changed):
+		if printed_dv == False and is_dv_stable(neighbors, dv_changed, stability_delay):
 			printed_dv = True
 			print "Router %s's DV table:" %my_id()
 			for node in sorted(my_dv):
@@ -239,7 +247,9 @@ def recompute_dv(my_dist):
 	return (dv, next_hop)
 
 #returns True if the dv is stable; False otherwise
-def is_dv_stable(neighbors, dv_changed):
+def is_dv_stable(neighbors, dv_changed, stability_delay):
+	if stability_delay > 0:
+		return False
 	for n in neighbors:
 		if not n in dv_changed:
 			return False #don't assume anything until at least one advert
@@ -334,5 +344,6 @@ if __name__ == '__main__':
 	#globals
 	TIME_BETWEEN_ADVERTS = 5
 	KEEP_ALIVE_THRESHOLD = TIME_BETWEEN_ADVERTS * 3
+	STABILITY_DELAY = 2
 
 	main()
