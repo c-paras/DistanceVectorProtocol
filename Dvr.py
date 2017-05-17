@@ -45,7 +45,7 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 	last_advert = 0 #node hasn't shared dv yet - set to beginning of time
 	printed_dv = False #ensures a particular stable dv is only printed once
 
-	#tracks whether the lasy advert from a router changed the dv
+	#tracks whether the last advert from a router changed the dv
 	dv_changed = collections.defaultdict(list)
 
 	next_hop = {} #next node in the shortest path to each router
@@ -53,7 +53,7 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 	dead_routers = [] #all known dead routers
 	last_heartbeat = {} #timestamp of last heartbeat from each node
 
-	#node just came alive - set last heartbeats to current time
+	#node just came alive - set all last heartbeats to current time
 	for n in neighbors:
 		last_heartbeat[n] = int(time.time())
 
@@ -69,17 +69,19 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 				print my_id(), 'sending:'
 				print msg
 			for n in neighbors:
-				sock.sendto(msg, ('', get_port(neighbors, n)))
 				if current_time - last_heartbeat[n] > KEEP_ALIVE_THRESHOLD:
-						#node has died - too long betwen heartbeats
+						#neighbor has died - too long betwen heartbeats
 						dead_neighbors.append(n)
 						dead_routers.append(n)
 						if DEBUG:
 							print '###########################'
 							print "%s's neighbor: router %s died" %(my_id(), n)
 							print '###########################'
+				else:
+					#otherwise send dv to neighbor
+					sock.sendto(msg, ('', get_port(neighbors, n)))
 
-		#remove dead routers from dist and dv tables
+		#remove dead routers from dist and dv tables & clean up other node state
 		for dead in dead_neighbors:
 			forget_dead_router(dead, neighbors, dv_changed, last_heartbeat, next_hop, most_recent_dvs, my_dist)
 			my_dv, next_hop = recompute_dv(my_dist)
@@ -126,7 +128,7 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 				print_dist_table(my_dist)
 				print_dv_table(my_dv)
 
-		#print dv if dv is considered stable; stability is detected when
+		#print dv if dv is considered stable - stability is detected when
 		#the last two adverts from all nodes have not changed the dv
 		if printed_dv == False and is_dv_stable(neighbors, dv_changed):
 			printed_dv = True
