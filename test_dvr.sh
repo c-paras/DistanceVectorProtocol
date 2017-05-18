@@ -2,12 +2,20 @@
 #Written by Costa Paraskevopoulos in May 2017
 #Runs the distance vector routing protocol at each node in the given topology
 
-if test $# -ne 1
+if test $# -ne 1 -a $# -ne 2
 then
-	echo "Usage: $0 <topology>" >&2
+	echo "Usage: $0 <topology> [-P]" >&2
+	exit 1
+elif test $# -eq 2 -a "$2" != '-P'
+then
+	echo "$0: expected '-P' as second argument" >&2
 	exit 1
 else
 	topology=$1
+	if test "$2" = '-P'
+	then
+		poison='-P'
+	fi
 fi
 
 if ! test -d "$topology" || ! test -x "$topology"
@@ -17,7 +25,13 @@ then
 fi
 
 prog=Dvr.py
-port_num=2000
+if test -n "$poison"
+then
+	port_num=6000
+else
+	port_num=2000
+fi
+initial_port=$port_num
 
 for router in A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
 do
@@ -26,12 +40,12 @@ do
 		break
 	fi
 	echo "Running router $router..."
-	./$prog $router $port_num "$topology/config$router.txt" &
+	./$prog $router $port_num "$topology/config$router.txt" $poison &
 	port_num=$(($port_num + 1))
 	sleep 1
 done
 
-if test $port_num -eq 2000 -a `ps 2000 | wc -l` -eq 1
+if test $port_num -eq $initial_port -a `ps $initial_port | wc -l` -eq 1
 then
 	echo "$0: no configuration files in '$topology'" >&2
 	exit 1
