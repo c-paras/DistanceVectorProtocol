@@ -139,15 +139,7 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 				#otherwise send dv to neighbor
 				sock.sendto(msg, ('', get_port(neighbors, n)))
 
-		#print dv if dv is considered stable - stability is detected when
-		#the last two adverts from all nodes have not changed the dv
-		if printed_dv == False and is_dv_stable(neighbors, dv_changed, stability_delay):
-			printed_dv = True
-			print "Router %s's DV table:" %my_id()
-			for node in sorted(my_dv):
-				print 'shortest path to node %s:' %node,
-				print 'the next hop is %s' %next_hop[node],
-				print 'and the cost is %.1f' %my_dv[node]
+		printed_dv = print_dv_if_stable(printed_dv, neighbors, dv_changed, stability_delay, my_dv, next_hop)
 
 """
 8 wait (until A sees a link cost change to neighbor V /* case 1 */
@@ -258,6 +250,18 @@ def is_dv_stable(neighbors, dv_changed, stability_delay):
 		elif len(dv_changed[n]) > 1 and dv_changed[n][len(dv_changed[n])-2]:
 			return False #2nd-last dv advert changed this nodes' dv
 	return True
+
+#print dv if dv is considered stable - stability is detected when
+#the last two adverts from all nodes have not changed the dv
+def print_dv_if_stable(printed_dv, neighbors, dv_changed, stability_delay, my_dv, next_hop):
+	if printed_dv == False and is_dv_stable(neighbors, dv_changed, stability_delay):
+		printed_dv = True
+		print "Router %s's DV table:" %my_id()
+		for node in sorted(my_dv):
+			print 'shortest path to node %s:' %node,
+			print 'the next hop is %s' %next_hop[node],
+			print 'and the cost is %.1f' %my_dv[node]
+	return printed_dv
 
 #returns a list of all routers in the old dv and not the new dv
 #this condition implies that the router has failed
