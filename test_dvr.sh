@@ -4,17 +4,17 @@
 
 if test $# -ne 1 -a $# -ne 2
 then
-	echo "Usage: $0 <topology> [-P]" >&2
+	echo "Usage: $0 <topology> [-p]" >&2
 	exit 1
-elif test $# -eq 2 -a "$2" != '-P'
+elif test $# -eq 2 -a "$2" != '-p' -a "$2" != '-P'
 then
-	echo "$0: expected '-P' as second argument" >&2
+	echo "$0: expected '-p' as second argument" >&2
 	exit 1
 else
 	topology=$1
-	if test "$2" = '-P'
+	if test "$2" = '-p'
 	then
-		poison='-P'
+		poison='-p'
 	fi
 fi
 
@@ -37,7 +37,7 @@ for router in A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
 do
 	if ! test -e "$topology/config$router.txt"
 	then
-		break
+		continue
 	fi
 	echo "Running router $router..."
 	./$prog $router $port_num "$topology/config$router.txt" $poison &
