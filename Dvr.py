@@ -267,7 +267,7 @@ def find_dv_to_send(my_dv, next_hop, n, link_cost_changed):
 		dv_to_send[dest] = my_dv[dest]
 	for dest in my_dv:
 		if next_hop[dest] == n:
-			dv_to_send[dest] = 999 #float('infinity')
+			dv_to_send[dest] = 999 #float('infinity') #TODO
 	return str(dv_to_send)
 
 #returns True if the dv is stable; False otherwise
