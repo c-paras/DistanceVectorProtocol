@@ -144,6 +144,13 @@ def main_loop(neighbors, neighbors2, my_dist, my_dv, sock):
 		printed_dv = print_dv_if_stable(printed_dv, neighbors, dv_changed, stability_delay, my_dv, next_hop)
 		if is_poison() and printed_dv:
 			neighbors = neighbors2 #apply new link costs after stability detected
+			#re-initialise dist table and dv table for this node
+			my_dist = initialise_dist(neighbors)
+			my_dv = initialise_dv(neighbors)
+			if DEBUG:
+				print_dist_table(my_dist)
+				print_dv_table(my_dv)
+
 			printed_dv = False #allow dv to be printed again
 
 """
