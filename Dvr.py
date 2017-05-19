@@ -79,6 +79,7 @@ def main_loop(neighbors, neighbors2, my_dist, my_dv, sock):
 				deduced_dead = infer_dead_routers(old_most_recent, received_dv)
 				for dead in deduced_dead:
 					stability_delay += STABILITY_DELAY
+					dv_changed = collections.defaultdict(list)
 					if DEBUG:
 						print '%s knows that %s is dead' %(my_id(), dead)
 					if dead in dead_routers:
@@ -121,6 +122,7 @@ def main_loop(neighbors, neighbors2, my_dist, my_dv, sock):
 		#remove dead routers from dist and dv tables & clean up other node state
 		for dead in dead_neighbors:
 			stability_delay += STABILITY_DELAY
+			dv_changed = collections.defaultdict(list)
 			forget_dead_router(dead, neighbors, dv_changed, last_heartbeat, next_hop, most_recent_dvs, my_dist)
 			my_dv, next_hop = recompute_dv(my_dist)
 			printed_dv = False #allow dv to be printed again
