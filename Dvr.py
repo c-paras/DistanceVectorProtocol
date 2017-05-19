@@ -11,7 +11,7 @@ DEBUG = 0
 def main():
 
 	#get neighbors for this node
-	neighbors, num_neighbors = process_config_file(CONFIG_FILE)
+	neighbors, neighbors2, num_neighbors = process_config_file(CONFIG_FILE)
 	if DEBUG:
 		print_neighbors(num_neighbors, neighbors)
 
@@ -35,13 +35,13 @@ def main():
 		sys.exit(1)
 
 	try:
-		main_loop(neighbors, my_dist, my_dv, sock)
+		main_loop(neighbors, neighbors2, my_dist, my_dv, sock)
 	except KeyboardInterrupt:
 		sock.close()
 		sys.exit(0)
 
 #implements the main logic for the DVR protocol at this router
-def main_loop(neighbors, my_dist, my_dv, sock):
+def main_loop(neighbors, neighbors2, my_dist, my_dv, sock):
 	last_advert = 0 #node hasn't shared dv yet - set to beginning of time
 	printed_dv = False #ensures a particular stable dv is only printed once
 
@@ -140,6 +140,9 @@ def main_loop(neighbors, my_dist, my_dv, sock):
 				sock.sendto(msg, ('', get_port(neighbors, n)))
 
 		printed_dv = print_dv_if_stable(printed_dv, neighbors, dv_changed, stability_delay, my_dv, next_hop)
+		if is_poison() and printed_dv:
+			neighbors = neighbors2 #apply new link costs after stability detected
+			printed_dv = False #allow dv to be printed again
 
 """
 8 wait (until A sees a link cost change to neighbor V /* case 1 */
@@ -299,14 +302,20 @@ def my_id():
 	return NODE_ID
 def my_port():
 	return NODE_PORT
+def is_poison():
+	if POISON_ON == True:
+		return True
+	else:
+		return False
 
 #processes the config file
-#returns a dictionary of neighbors in the form (cost, port)
+#returns a dictionary of neighbors in the form (cost, cost', port)
 #also returns the number of neighbors
 def process_config_file(filename):
 	if os.access(filename, os.R_OK) and os.path.isfile(filename):
 		lines = open(filename, 'r').readlines()
 		neighbors = {}
+		new_costs = {}
 		first_line = 0
 		num_neighbors = 0
 		for line in lines:
@@ -316,9 +325,16 @@ def process_config_file(filename):
 				first_line = 1
 				continue
 			line = line.strip('\n')
-			(node_id, cost, node_port) = line.split(' ')
-			neighbors[node_id] = (float(cost), int(node_port))
-		return (neighbors, num_neighbors)
+			if is_poison():
+				(node_id, cost, new_cost, node_port) = line.split(' ')
+				neighbors[node_id] = (float(cost), int(node_port))
+				new_costs[node_id] = (float(new_cost), int(node_port))
+			else:
+				(node_id, cost, node_port) = line.split(' ')
+				neighbors[node_id] = (float(cost), int(node_port))
+		if is_poison():
+			new_costs = neighbors
+		return (neighbors, new_costs, num_neighbors)
 	else:
 		print >>sys.stderr, "%s: cannot read '%s'" %(sys.argv[0], filename)
 		sys.exit(1)
@@ -349,6 +365,9 @@ if __name__ == '__main__':
 	NODE_ID = sys.argv[1]
 	NODE_PORT = int(sys.argv[2])
 	CONFIG_FILE = sys.argv[3]
+	POISON_ON = False
+	if len(sys.argv) == 5:
+		POISON_ON = True
 
 	#globals
 	TIME_BETWEEN_ADVERTS = 5
