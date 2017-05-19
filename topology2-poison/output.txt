@@ -1,0 +1,9 @@
+Router Y's DV table:
+shortest path to node X: the next hop is X and the cost is 4.0
+shortest path to node Z: the next hop is Z and the cost is 1.0
+Router X's DV table:
+shortest path to node Y: the next hop is Y and the cost is 4.0
+shortest path to node Z: the next hop is Y and the cost is 5.0
+Router Z's DV table:
+shortest path to node X: the next hop is Y and the cost is 5.0
+shortest path to node Y: the next hop is Y and the cost is 1.0

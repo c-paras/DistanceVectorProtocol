@@ -64,6 +64,8 @@ def main_loop(num_neighbors, neighbors, neighbors2, my_dist, my_dv, sock):
 
 	link_cost_changed = False #to ensure link cost changes only once
 
+	poison_delay = POISON_DELAY #avoid link cost change being applied before all routers have detected stability
+
 	while 1:
 		#check if a neighboring node has advertised their dv table
 		available = select.select([sock], [], [], 0)
@@ -141,14 +143,15 @@ def main_loop(num_neighbors, neighbors, neighbors2, my_dist, my_dv, sock):
 				print my_id(), 'sending:'
 				print msg
 			for n in neighbors:
-				#otherwise send dv to neighbor
 				sock.sendto(msg, ('', get_port(neighbors, n)))
+			if is_poison() and printed_dv:
+				poison_delay -= 1
 
 		printed_dv = print_dv_if_stable(printed_dv, neighbors, dv_changed, stability_delay, my_dv, next_hop)
 
 		#simulate link cost change if poison flag enabled
 		if is_poison() and printed_dv and link_cost_changed == False:
-			if neighbors != neighbors2:
+			if neighbors != neighbors2 and poison_delay == 0:
 				neighbors = neighbors2 #apply new link costs after stability detected
 
 				#re-initialise dist table and dv table for this node
@@ -380,5 +383,6 @@ if __name__ == '__main__':
 	TIME_BETWEEN_ADVERTS = 5
 	KEEP_ALIVE_THRESHOLD = TIME_BETWEEN_ADVERTS * 3
 	STABILITY_DELAY = 2
+	POISON_DELAY = 3
 
 	main()
