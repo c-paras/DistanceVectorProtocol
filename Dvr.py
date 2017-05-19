@@ -3,7 +3,7 @@
 #Implements the distance vector routing protocol over UDP
 #Python 2.7 has been used (the #! line should default to version 2.7)
 
-import sys, re, os, time, select, collections
+import sys, re, os, time, select, collections, copy
 from socket import *
 
 DEBUG = 0
@@ -100,8 +100,6 @@ def main_loop(num_neighbors, neighbors, neighbors2, my_dist, my_dv, sock):
 			#update the change status of the dv from the current sender
 			if my_dv != old_dv:
 				dv_changed[sender_id].append(True)
-#				if printed_dv == True:
-#					printed_dv = False #allow dv to be printed again
 			else:
 				dv_changed[sender_id].append(False)
 
@@ -138,20 +136,20 @@ def main_loop(num_neighbors, neighbors, neighbors2, my_dist, my_dv, sock):
 			if stability_delay > 0:
 				stability_delay -= 1
 			last_advert = current_time
-			msg = str(my_dv)
-			if DEBUG:
-				print my_id(), 'sending:'
-				print msg
 			for n in neighbors:
+				msg = find_dv_to_send(my_dv, next_hop, n, link_cost_changed)
+				if DEBUG:
+					print my_id(), 'sending to %s:' %n
+					print msg
 				sock.sendto(msg, ('', get_port(neighbors, n)))
-			if is_poison() and printed_dv:
+			if is_poison() and printed_dv and not link_cost_changed:
 				poison_delay -= 1
 
 		printed_dv = print_dv_if_stable(printed_dv, neighbors, dv_changed, stability_delay, my_dv, next_hop)
 
 		#simulate link cost change if poison flag enabled
-		if is_poison() and printed_dv and link_cost_changed == False:
-			if neighbors != neighbors2 and poison_delay == 0:
+		if is_poison() and printed_dv and link_cost_changed == False and poison_delay == 0:
+			if neighbors != neighbors2:
 				neighbors = neighbors2 #apply new link costs after stability detected
 
 				#re-initialise dist table and dv table for this node
@@ -161,6 +159,9 @@ def main_loop(num_neighbors, neighbors, neighbors2, my_dist, my_dv, sock):
 					print_neighbors(num_neighbors, neighbors)
 					print_dist_table(my_dist)
 					print_dv_table(my_dv)
+
+			if DEBUG:
+				print my_id(), 'has entered poision reverse mode'
 
 			link_cost_changed = True
 			dv_changed = collections.defaultdict(list)
@@ -249,6 +250,26 @@ def recompute_dv(my_dist):
 
 	return (dv, next_hop)
 
+#decides on dv to send the given neighbor
+#if poison reverse is not enabled, this is just str(my_dv)
+#otherwise, if this node routes thru the given neighbor to get to
+#a particular router, the cost to this router is faked as infinite
+#this heuristic is applied only after stability is established initially
+#and the link cost change has been applied
+def find_dv_to_send(my_dv, next_hop, n, link_cost_changed):
+	dv_as_str = str(my_dv)
+	if not is_poison():
+		return dv_as_str
+	if not link_cost_changed:
+		return dv_as_str
+	dv_to_send = copy.deepcopy(my_dv)
+	for dest in my_dv:
+		dv_to_send[dest] = my_dv[dest]
+	for dest in my_dv:
+		if next_hop[dest] == n:
+			dv_to_send[dest] = 999 #float('infinity')
+	return str(dv_to_send)
+
 #returns True if the dv is stable; False otherwise
 def is_dv_stable(neighbors, dv_changed, stability_delay):
 	if stability_delay > 0:
@@ -285,7 +306,7 @@ def infer_dead_routers(old_most_recent, received_dv):
 	return dead_nodes
 
 #clears any state associated with a router known to be dead
-#the extra checks are necessary in case mutliple neighbors suggest a failed node
+#the extra checks are necessary in case multiple neighbors suggest a failed node
 def forget_dead_router(d, neighbors, dv_changed, last_heartbeat, next_hop, most_recent_dvs, my_dist):
 	if d in neighbors: del neighbors[d]
 	if d in dv_changed: del dv_changed[d]
@@ -383,6 +404,6 @@ if __name__ == '__main__':
 	TIME_BETWEEN_ADVERTS = 5
 	KEEP_ALIVE_THRESHOLD = TIME_BETWEEN_ADVERTS * 3
 	STABILITY_DELAY = 2
-	POISON_DELAY = 3
+	POISON_DELAY = 4
 
 	main()
