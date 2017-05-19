@@ -14,6 +14,7 @@ def main():
 	neighbors, neighbors2, num_neighbors = process_config_file(CONFIG_FILE)
 	if DEBUG:
 		print_neighbors(num_neighbors, neighbors)
+		print_neighbors(num_neighbors, neighbors2)
 
 	#initialise dist table for this node
 	my_dist = initialise_dist(neighbors)
@@ -35,13 +36,13 @@ def main():
 		sys.exit(1)
 
 	try:
-		main_loop(neighbors, neighbors2, my_dist, my_dv, sock)
+		main_loop(num_neighbors, neighbors, neighbors2, my_dist, my_dv, sock)
 	except KeyboardInterrupt:
 		sock.close()
 		sys.exit(0)
 
 #implements the main logic for the DVR protocol at this router
-def main_loop(neighbors, neighbors2, my_dist, my_dv, sock):
+def main_loop(num_neighbors, neighbors, neighbors2, my_dist, my_dv, sock):
 	last_advert = 0 #node hasn't shared dv yet - set to beginning of time
 	printed_dv = False #ensures a particular stable dv is only printed once
 
@@ -57,9 +58,11 @@ def main_loop(neighbors, neighbors2, my_dist, my_dv, sock):
 	for n in neighbors:
 		last_heartbeat[n] = int(time.time())
 
-	#delays the detection of stability in the case of failed nodes being detected
+	#delays the detection of stability in the case of failed nodes being detected or link costs changes
 	#this ensures that a router receives updated info from all nodes before claiming stability
 	stability_delay = 0
+
+	link_cost_changed = False #to ensure link cost changes only once
 
 	while 1:
 		#check if a neighboring node has advertised their dv table
@@ -142,31 +145,24 @@ def main_loop(neighbors, neighbors2, my_dist, my_dv, sock):
 				sock.sendto(msg, ('', get_port(neighbors, n)))
 
 		printed_dv = print_dv_if_stable(printed_dv, neighbors, dv_changed, stability_delay, my_dv, next_hop)
-		if is_poison() and printed_dv:
-			neighbors = neighbors2 #apply new link costs after stability detected
-			#re-initialise dist table and dv table for this node
-			my_dist = initialise_dist(neighbors)
-			my_dv = initialise_dv(neighbors)
-			if DEBUG:
-				print_dist_table(my_dist)
-				print_dv_table(my_dv)
 
+		#simulate link cost change if poison flag enabled
+		if is_poison() and printed_dv and link_cost_changed == False:
+			if neighbors != neighbors2:
+				neighbors = neighbors2 #apply new link costs after stability detected
+
+				#re-initialise dist table and dv table for this node
+				my_dist = initialise_dist(neighbors)
+				my_dv = initialise_dv(neighbors)
+				if DEBUG:
+					print_neighbors(num_neighbors, neighbors)
+					print_dist_table(my_dist)
+					print_dv_table(my_dv)
+
+			link_cost_changed = True
+			dv_changed = collections.defaultdict(list)
+			stability_delay += STABILITY_DELAY * 2
 			printed_dv = False #allow dv to be printed again
-
-"""
-8 wait (until A sees a link cost change to neighbor V /* case 1 */
-9 or until A receives mindist(V,*) from neighbor V) /* case 2 */
-10 if (c(A,V) changes by +/-d) /* case 1 */
-11 for all destinations Y do
-12 distV(A,Y) = distV(A,Y) +/- d
-13 else /* case 2: */
-14 for all destinations Y do
-15 distV(A,Y) = c(A,V) + mindist(V, Y);
-16 update mindist(A,*)
-15 if (there is a change in mindist(A, *))
-16 send mindist(A, *) to all neighbors
-17 forever
-"""
 
 #prints number of neighbors and cost to each neighbor for debugging
 def print_neighbors(num_neighbors, neighbors):
@@ -341,7 +337,7 @@ def process_config_file(filename):
 			else:
 				(node_id, cost, node_port) = line.split(' ')
 				neighbors[node_id] = (float(cost), int(node_port))
-		if is_poison():
+		if not is_poison():
 			new_costs = neighbors
 		return (neighbors, new_costs, num_neighbors)
 	else:
@@ -376,6 +372,8 @@ if __name__ == '__main__':
 	CONFIG_FILE = sys.argv[3]
 	POISON_ON = False
 	if len(sys.argv) == 5:
+		if DEBUG:
+			print 'Poison reverse is active'
 		POISON_ON = True
 
 	#globals
