@@ -5,9 +5,9 @@ This application was built and tested on Ubuntu 64-bit 16.04 LTS using Python ve
 
 * An instance of a routing protocol can be launched by running
 ```
-./Dvr.py <node id> <node port> <config file> [-P]
+./Dvr.py <node id> <node port> <config file> [-p]
 ```
-where `node id` is a single uppercase letter, `node port` is greater than 1023 and `config file` is a file describing the local topology of the node. If the `-P` flag is specified, then poisoned reverse is enabled; otherwise, it is disabled.
+where `node id` is a single uppercase letter, `node port` is greater than 1023 and `config file` is a file describing the local topology of the node. If the `-p` flag is specified, then poisoned reverse is enabled; otherwise, it is disabled.
 * A valid `config file` has the following format:
 	* The first line indicates the number of neighbors the node has
 	* Each line after that describes a particular neighbor, consisting of:

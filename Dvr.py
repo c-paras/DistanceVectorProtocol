@@ -327,7 +327,7 @@ if __name__ == '__main__':
 
 	#require 3 or 4 args
 	if len(sys.argv) != 4 and len(sys.argv) != 5:
-		args = '<node id> <node port> <config file> [-P]'
+		args = '<node id> <node port> <config file> [-p]'
 		print >>sys.stderr, 'Usage:', sys.argv[0], args
 		sys.exit(1)
 
@@ -339,6 +339,11 @@ if __name__ == '__main__':
 	#port # must be non-negative
 	if not sys.argv[2].isdigit():
 		print >>sys.stderr, "%s: invalid port number '%s'" %(sys.argv[0], sys.argv[2])
+		sys.exit(1)
+
+	#ensure -p or -P is specified as 4th arg
+	if len(sys.argv) == 5 and sys.argv[4] != '-p' and sys.argv[4] != '-P':
+		print >>sys.stderr, "%s: unrecognised argument '%s', expecting '-p'" %(sys.argv[0], sys.argv[4])
 		sys.exit(1)
 
 	NODE_ID = sys.argv[1]
