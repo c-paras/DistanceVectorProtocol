@@ -1,0 +1,100 @@
+Router C's DV table:
+shortest path to node A: the next hop is A and the cost is 1.0
+shortest path to node B: the next hop is B and the cost is 1.5
+shortest path to node D: the next hop is E and the cost is 3.5
+shortest path to node E: the next hop is E and the cost is 1.5
+shortest path to node F: the next hop is F and the cost is 1.5
+shortest path to node G: the next hop is G and the cost is 5.0
+shortest path to node H: the next hop is E and the cost is 4.5
+shortest path to node I: the next hop is E and the cost is 5.0
+shortest path to node J: the next hop is F and the cost is 5.5
+Router B's DV table:
+shortest path to node A: the next hop is A and the cost is 2.0
+shortest path to node C: the next hop is C and the cost is 1.5
+shortest path to node D: the next hop is C and the cost is 5.0
+shortest path to node E: the next hop is C and the cost is 3.0
+shortest path to node F: the next hop is C and the cost is 3.0
+shortest path to node G: the next hop is G and the cost is 4.5
+shortest path to node H: the next hop is C and the cost is 6.0
+shortest path to node I: the next hop is C and the cost is 6.5
+shortest path to node J: the next hop is C and the cost is 7.0
+Router F's DV table:
+shortest path to node A: the next hop is C and the cost is 2.5
+shortest path to node B: the next hop is C and the cost is 3.0
+shortest path to node C: the next hop is C and the cost is 1.5
+shortest path to node D: the next hop is C and the cost is 5.0
+shortest path to node E: the next hop is C and the cost is 3.0
+shortest path to node G: the next hop is C and the cost is 6.5
+shortest path to node H: the next hop is H and the cost is 3.5
+shortest path to node I: the next hop is H and the cost is 5.0
+shortest path to node J: the next hop is J and the cost is 4.0
+Router A's DV table:
+shortest path to node B: the next hop is B and the cost is 2.0
+shortest path to node C: the next hop is C and the cost is 1.0
+shortest path to node D: the next hop is C and the cost is 4.5
+shortest path to node E: the next hop is C and the cost is 2.5
+shortest path to node F: the next hop is C and the cost is 2.5
+shortest path to node G: the next hop is C and the cost is 6.0
+shortest path to node H: the next hop is C and the cost is 5.5
+shortest path to node I: the next hop is C and the cost is 6.0
+shortest path to node J: the next hop is C and the cost is 6.5
+Router E's DV table:
+shortest path to node A: the next hop is C and the cost is 2.5
+shortest path to node B: the next hop is C and the cost is 3.0
+shortest path to node C: the next hop is C and the cost is 1.5
+shortest path to node D: the next hop is D and the cost is 2.0
+shortest path to node F: the next hop is C and the cost is 3.0
+shortest path to node G: the next hop is C and the cost is 6.5
+shortest path to node H: the next hop is H and the cost is 3.0
+shortest path to node I: the next hop is I and the cost is 3.5
+shortest path to node J: the next hop is H and the cost is 4.5
+Router G's DV table:
+shortest path to node A: the next hop is C and the cost is 6.0
+shortest path to node B: the next hop is B and the cost is 4.5
+shortest path to node C: the next hop is C and the cost is 5.0
+shortest path to node D: the next hop is C and the cost is 8.5
+shortest path to node E: the next hop is C and the cost is 6.5
+shortest path to node F: the next hop is C and the cost is 6.5
+shortest path to node H: the next hop is J and the cost is 7.5
+shortest path to node I: the next hop is J and the cost is 8.0
+shortest path to node J: the next hop is J and the cost is 6.0
+Router D's DV table:
+shortest path to node A: the next hop is E and the cost is 4.5
+shortest path to node B: the next hop is E and the cost is 5.0
+shortest path to node C: the next hop is E and the cost is 3.5
+shortest path to node E: the next hop is E and the cost is 2.0
+shortest path to node F: the next hop is E and the cost is 5.0
+shortest path to node G: the next hop is E and the cost is 8.5
+shortest path to node H: the next hop is E and the cost is 5.0
+shortest path to node I: the next hop is E and the cost is 5.5
+shortest path to node J: the next hop is E and the cost is 6.5
+Router H's DV table:
+shortest path to node A: the next hop is E and the cost is 5.5
+shortest path to node B: the next hop is E and the cost is 6.0
+shortest path to node C: the next hop is E and the cost is 4.5
+shortest path to node D: the next hop is E and the cost is 5.0
+shortest path to node E: the next hop is E and the cost is 3.0
+shortest path to node F: the next hop is F and the cost is 3.5
+shortest path to node G: the next hop is J and the cost is 7.5
+shortest path to node I: the next hop is I and the cost is 1.5
+shortest path to node J: the next hop is J and the cost is 1.5
+Router J's DV table:
+shortest path to node A: the next hop is F and the cost is 6.5
+shortest path to node B: the next hop is F and the cost is 7.0
+shortest path to node C: the next hop is F and the cost is 5.5
+shortest path to node D: the next hop is H and the cost is 6.5
+shortest path to node E: the next hop is H and the cost is 4.5
+shortest path to node F: the next hop is F and the cost is 4.0
+shortest path to node G: the next hop is G and the cost is 6.0
+shortest path to node H: the next hop is H and the cost is 1.5
+shortest path to node I: the next hop is I and the cost is 2.0
+Router I's DV table:
+shortest path to node A: the next hop is E and the cost is 6.0
+shortest path to node B: the next hop is E and the cost is 6.5
+shortest path to node C: the next hop is E and the cost is 5.0
+shortest path to node D: the next hop is E and the cost is 5.5
+shortest path to node E: the next hop is E and the cost is 3.5
+shortest path to node F: the next hop is H and the cost is 5.0
+shortest path to node G: the next hop is J and the cost is 8.0
+shortest path to node H: the next hop is H and the cost is 1.5
+shortest path to node J: the next hop is J and the cost is 2.0

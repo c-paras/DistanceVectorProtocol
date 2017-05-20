@@ -12,7 +12,7 @@ then
 	exit 1
 else
 	topology=$1
-	if test "$2" = '-p'
+	if test -n "$2"
 	then
 		poison='-p'
 	fi
