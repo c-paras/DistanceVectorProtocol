@@ -1,0 +1,54 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[hidelinks]{hyperref}
+
+\title{Distance Vector Routing Protocol \\ \large System Report}
+\author{Constantinos Paraskevopoulos (z5059988)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+	This report outlines the design and operation of the Distance Vector Routing Protocol implementation developed as a COMP3331 assignment during Semester 1, 2017. The application was developed in Python 2.7 and tested with at most ten instances (routers).
+\end{abstract}
+
+\section{Overview}
+\label{sec:overview}
+
+The DVR protocol is implemented the Python source file called \verb|DvrPr.py|. Multiple instances of the program (each corresponding to a single node in the network) can be run by running \verb|./DvrPr.py <id> <port> <config file> [-p]| in separate terminals.
+\\\\
+Once an instance of a router is run, that router stores its neighbors in a dictionary (mapping id to cost for each neighbor) and computes its distance vector (DV) table. The cost to each neighbor is stored in the dictionary \verb|my_dv| and the next hop to each node is stored in the dictionary \verb|next_hop|.
+\\\\
+In addition to the node's DV table, each router maintains the following state in order for the various components of the DVR algorithm to work:
+\begin{itemize}
+	\item The timestamp of the last DV table ``advert" \verb|last_advert|.
+	\item A list of routers known to been inactive \verb|dead_routers|.
+	\item The timestamp of the last heartbeat from each router \verb|last_heartbeat|.
+	\item The most-recent DV table received from each neighbor \verb|most_recent_dvs|.
+	\item A dictionary that indicates whether the last DV advert from a particular router changed the DV table of the node \verb|dv_changed|.
+\end{itemize}
+
+\section{Algorithm}
+\label{sec:algorihtm}
+
+There are five main steps in the algorithm (these steps are carried out in every iteration of the main loop):
+\begin{enumerate}
+	\item If a neighbor has sent their DV, use it to recompute the distances to each node from every other node (and store this in \verb|dist|) and then recompute the DV table (and store this in \verb|my_dv|).
+	\item If more than three consecutive heartbeat messages\footnote{Note that the distance vector adverts are used as heartbeat messages rather than explicit heartbeat messages.} have been missed from a particular neighbor, assume the neighbor has ``died" and re-enable printing by setting \verb|printed_dv = False|.
+	\item If more than five seconds have passed since the last DV table advert, send the current DV to all neighbors.
+	\item If the last two DV adverts from each neighbor have not changed the DV, assume the DV is stable and output this to the terminal.
+	\item If poisoned reverse is enabled and the DV is stable, apply the link cost change and update \verb|dist| and \verb|my_dv| and re-enable printing by setting \verb|printed_dv = False|.
+\end{enumerate}
+Each router will continually send its DV table to its neighbors until it is terminated by pressing \verb|CTRL+C| in the terminal.
+
+\section{Message Format}
+\label{sec:msg_format}
+
+All messages sent between routers are done so over UDP. Since the DV table for each node is represented using a Python dictionary, a string representation of this dictionary is sent to each router - this makes processing a received DV trivial. For example, Router A might send \verb|{'B': 12.0, 'C': 4.0, 'D': 5.5, 'E': 2.3}| to its neighbors.
+\\\\
+If poisoned reverse is enabled and Router A routes through B to get to C, Router A ``poisons" its DV table by sending \verb|{'B': 12.0, 'C': 'inf', 'D': 5.5, 'E': 2.3}| to B to avoid looped paths that cause the ``count to infinity" problem. Once Router B receives this, it infers the cost to C as infinite and reflects this in its own DV table.
+
+\end{document}
