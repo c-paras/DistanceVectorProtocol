@@ -118,9 +118,7 @@ def main_loop(num_neighbors, neighbors, neighbors2, my_dist, my_dv, sock):
 					dead_neighbors.append(n)
 					dead_routers.append(n)
 					if DEBUG:
-						print '###########################'
 						print "%s's neighbor: router %s died" %(my_id(), n)
-						print '###########################'
 
 		#remove dead routers from dist and dv tables & clean up other node state
 		for dead in dead_neighbors:
@@ -208,11 +206,17 @@ def initialise_dv(neighbors):
 
 #converts a received message into a dictionary, ignoring any dead routers
 def process_dv_table(msg, dead_routers):
-	dv = eval(msg)
+	msg = re.sub(": 'inf'", ': -1', msg) #make cost invalid
+	dv = eval(msg) #python can't eval float('infinity')
+
+	#remove known dead routers
 	filtered_dv = {}
 	for router_id in dv:
+		if dv[router_id] == -1:
+			dv[router_id] = float('infinity') #repair cost as infinite
 		if not router_id in dead_routers:
 			filtered_dv[router_id] = dv[router_id]
+
 	return filtered_dv
 
 #updates the dist table based on the received dv table
@@ -267,7 +271,7 @@ def find_dv_to_send(my_dv, next_hop, n, link_cost_changed):
 		dv_to_send[dest] = my_dv[dest]
 	for dest in my_dv:
 		if next_hop[dest] == n:
-			dv_to_send[dest] = 999 #float('infinity') #TODO
+			dv_to_send[dest] = 'inf' #py can't eval float('infinity')
 	return str(dv_to_send)
 
 #returns True if the dv is stable; False otherwise
