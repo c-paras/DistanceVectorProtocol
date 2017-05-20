@@ -15,7 +15,7 @@ where `node id` is a single uppercase letter, `node port` is greater than 1023 a
 		* The cost to reach that neighbor
 		* The `node port` of that neighbor
 * Several basic topologies are provided in the directories `topology1`, `topology3`, `topology 4` etc. Each topology contains a file in the above format for each node.
-* The topologies named `topology2-poison`, `topology8-poison` and `topology9-poison`can be used to test poisoned reverse. The configuration files for these topologies also contain an extra cost to each neighbor - this cost is used as the link cost after the distance vector (DV) tables have stabilized, simulating a link cost change at one or more links.
+* The topologies named `topology2-poison`, `topology8-poison` and `topology9-poison` can be used to test poisoned reverse. The configuration files for these topologies also contain an extra cost to each neighbor - this cost is used as the link cost after the distance vector (DV) tables have stabilized, simulating a link cost change at one or more links.
 * To test basic distance vector routing, run
 ```
 ./test_dvr.sh <topology>
