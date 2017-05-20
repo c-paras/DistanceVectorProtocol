@@ -63,7 +63,6 @@ def main_loop(num_neighbors, neighbors, neighbors2, my_dist, my_dv, sock):
 	stability_delay = 0
 
 	link_cost_changed = False #to ensure link cost changes only once
-
 	poison_delay = POISON_DELAY #avoid link cost change being applied before all routers have detected stability
 
 	while 1:
