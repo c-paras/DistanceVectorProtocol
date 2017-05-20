@@ -14,12 +14,13 @@ where `node id` is a single uppercase letter, `node port` is greater than 1023 a
 		* The `node id` of that neighbor
 		* The cost to reach that neighbor
 		* The `node port` of that neighbor
-* Several topologies are provided in the directories `topology1`, `topology2` etc. Each topology contains a file in the above format for each node.
+* Several basic topologies are provided in the directories `topology1`, `topology3`, `topology 4` etc. Each topology contains a file in the above format for each node.
+* The topologies named `topology2-poison` and `topology8-poison` can be used to test poisoned reverse. The configuration files for these topologies also contain an extra cost to each neighbor - this cost is used as the link cost after the distance vector (DV) tables have stabilized, simulating a link cost change at one or more links.
 * To test basic distance vector routing, run
 ```
-./test_base.sh <topology>
+./test_dvr.sh <topology>
 ```
-where `topology` is the name of one of the topology directories. Once the distance vector (DV) tables stabilize, each node will display their DV table.
+where `topology` is the name of one of the basic topology directories. Once the DV tables stabilize, each node will display their DV table.
 * To test the handling of node failure(s):
 	* Wait for the DV tables to stabilize and display
 	* Find the process ID of the node instances by running `pgrep Dvr.py`
@@ -27,6 +28,11 @@ where `topology` is the name of one of the topology directories. Once the distan
 	* Kill the process running that node's routing protocol using `kill <pid>`
 	* Wait for the DV tables to stabilize
 	* Repeat for more node failures
+* To test distance vector routing with poisoned reverse enabled, run
+```
+./test_dvr.sh <topology> -p
+```
+where `topology` is the name of one of the poison-labeled topology directories. Once the DV tables stabilize, each node will display their DV table. Following this, the link cost changes will be applied and the DV tables will quickly converge and be displayed.
 
 Copyright (C) 2017 Costa Paraskevopoulos
 
