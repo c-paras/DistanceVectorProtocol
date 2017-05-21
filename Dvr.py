@@ -340,6 +340,12 @@ def is_poison():
 	else:
 		return False
 
+#kills programs with error message in the event of a bad config file
+def bad_input_file(filename):
+	print >>sys.stderr, "%s: cannot parse configuration file '%s'" %(sys.argv[0], filename)
+	print >>sys.stderr, "%s: perhaps you meant to use the '-p' flag" %sys.argv[0]
+	sys.exit(1)
+
 #processes the config file
 #returns a dictionary of neighbors in the form (cost, cost', port)
 #also returns the number of neighbors
@@ -358,11 +364,17 @@ def process_config_file(filename):
 				continue
 			line = line.strip('\n')
 			if is_poison():
-				(node_id, cost, new_cost, node_port) = line.split(' ')
+				try:
+					(node_id, cost, new_cost, node_port) = line.split(' ')
+				except:
+					bad_input_file(filename)
 				neighbors[node_id] = (float(cost), int(node_port))
 				new_costs[node_id] = (float(new_cost), int(node_port))
 			else:
-				(node_id, cost, node_port) = line.split(' ')
+				try:
+					(node_id, cost, node_port) = line.split(' ')
+				except:
+					bad_input_file(filename)
 				neighbors[node_id] = (float(cost), int(node_port))
 		if not is_poison():
 			new_costs = neighbors
