@@ -12,19 +12,19 @@
 \maketitle
 
 \begin{abstract}
-	This report outlines the design and operation of the Distance Vector Routing Protocol implementation developed as a COMP3331 assignment during Semester 1, 2017. The application was developed in Python 2.7 and tested with at most ten instances (routers).
+	This report outlines the design and operation of the Distance Vector Routing Protocol developed as a COMP3331 assignment during Semester 1, 2017. The application was developed in Python 2.7 and tested with at most ten instances (routers).
 \end{abstract}
 
 \section{Overview}
 \label{sec:overview}
 
-The DVR protocol is implemented the Python source file called \verb|DvrPr.py|. Multiple instances of the program (each corresponding to a single node in the network) can be run by running \verb|./DvrPr.py <id> <port> <config file> [-p]| in separate terminals.
+The implementation is located in the Python source file \verb|DvrPr.py|. An instance of the program (corresponding to a single node) can be run by running \verb|./DvrPr.py <id> <port> <config file> [-p]|. The base DVR algorithm, handling of node failures and poisoned reverse is fully-implemented.
 \\\\
 Once an instance of a router is run, that router stores its neighbors in a dictionary (mapping id to cost for each neighbor) and computes its distance vector (DV) table. The cost to each neighbor is stored in the dictionary \verb|my_dv| and the next hop to each node is stored in the dictionary \verb|next_hop|.
 \\\\
 In addition to the node's DV table, each router maintains the following state in order for the various components of the DVR algorithm to work:
 \begin{itemize}
-	\item The timestamp of the last DV table ``advert" \verb|last_advert|.
+	\item The timestamp of the last DV table ``advert" made \verb|last_advert|.
 	\item A list of routers known to been inactive \verb|dead_routers|.
 	\item The timestamp of the last heartbeat from each router \verb|last_heartbeat|.
 	\item The most-recent DV table received from each neighbor \verb|most_recent_dvs|.
@@ -32,7 +32,7 @@ In addition to the node's DV table, each router maintains the following state in
 \end{itemize}
 
 \section{Algorithm}
-\label{sec:algorihtm}
+\label{sec:algorithm}
 
 There are five main steps in the algorithm (these steps are carried out in every iteration of the main loop):
 \begin{enumerate}
